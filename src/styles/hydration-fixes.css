@@ -1,0 +1,111 @@
+/*
+  Hydration error fixes for Radix UI and browser extension conflicts
+  These styles ensure consistent formatting between server and client rendering
+*/
+
+/* Normalize style attribute formatting to prevent hydration mismatches */
+/* Only hide elements that should be visually hidden but remain accessible */
+[data-radix-select-scroll-up-button],
+[data-radix-select-scroll-down-button] {
+  /* Force consistent units to avoid px vs pixel mismatches for scroll buttons */
+  width: 1px !important;
+  height: 1px !important;
+  clip: rect(0px, 0px, 0px, 0px) !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  border-width: 0px !important;
+  padding: 0px !important;
+  margin: 0px !important;
+}
+
+/* Fix border and padding normalization for visible elements */
+[data-radix-select-trigger],
+[data-radix-select-content],
+[data-radix-select-item],
+[data-radix-select-viewport],
+[data-radix-select-separator],
+[data-radix-select-group],
+[data-radix-select-value],
+[data-radix-select-label] {
+  /* Normalize border width to avoid px vs pixel mismatches */
+  border-width: 1px !important;
+  border-style: solid !important;
+  /* Ensure consistent padding and margin values */
+  padding: var(--radix-select-padding) 0px !important;
+  margin: 0px !important;
+}
+
+/* Handle browser extension attributes like DarkReader */
+[data-radix-select-trigger][data-darkreader-inline-stroke],
+[data-radix-select-content][data-darkreader-inline-stroke],
+[data-radix-select-item][data-darkreader-inline-stroke] {
+  /* Normalize CSS custom properties that browser extensions might inject */
+  --darkreader-inline-stroke: currentColor !important;
+  stroke: currentColor !important;
+}
+
+/* Ensure consistent border formatting (already handled above) */
+/* This rule is redundant since the normalization is handled in the rule above */
+
+/* Normalize z-index values to prevent number vs string mismatches */
+[data-radix-select-content] {
+  z-index: 50 !important;
+}
+
+/* Handle transform and transition values consistently */
+[data-radix-select-content][data-state="open"],
+[data-radix-select-content][data-state="closed"] {
+  /* Don't override animations - let the component handle its own transforms */
+  /* transform: none !important; REMOVED */
+  opacity: 1 !important;
+}
+
+/* Focus and hover states normalization */
+[data-radix-select-trigger]:focus,
+[data-radix-select-trigger]:hover,
+[data-radix-select-item]:focus,
+[data-radix-select-item]:hover {
+  /* Ensure consistent formatting of CSS properties */
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Media query responsive properties */
+@media (prefers-reduced-motion: reduce) {
+  [data-radix-select-content],
+  [data-radix-select-trigger] {
+    /* Disable animations consistently */
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* High contrast mode normalization */
+@media (prefers-contrast: high) {
+  [data-radix-select-trigger],
+  [data-radix-select-item] {
+    /* Ensure consistent border colors */
+    border-color: currentColor !important;
+  }
+}
+
+/* Additional fixes for Select dropdown visibility */
+[data-radix-select-content] {
+  /* Ensure proper background and text colors */
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border-color: var(--border) !important;
+}
+
+[data-radix-select-item] {
+  /* Ensure proper text color for items */
+  color: var(--popover-foreground) !important;
+}
+
+[data-radix-select-item]:hover,
+[data-radix-select-item]:focus {
+  /* Ensure proper hover/focus colors */
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}

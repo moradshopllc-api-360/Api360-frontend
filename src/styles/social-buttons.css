@@ -1,0 +1,107 @@
+/*
+  Social Auth Button Styles
+  Prevenir dispersión de iconos y saltos visuales durante la carga
+*/
+
+/* Contenedor estable para iconos de botones sociales */
+.social-button-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  min-height: 1rem;
+  isolation: isolate;
+}
+
+/* Prevenir布局 shift durante la carga */
+.social-button-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: currentColor;
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.2s ease;
+}
+
+/* Estabilizar animaciones del botón Google */
+.google-button-container {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0); /* Forzar composición GPU */
+}
+
+/* Prevenir parpadeo del icono Google */
+.google-button-container svg {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Estados de carga consistentes */
+.social-button-loading {
+  pointer-events: none;
+}
+
+.social-button-loading .social-button-icon {
+  animation: socialButtonPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes socialButtonPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Prevenir saltos de layout durante hidratación */
+@media (prefers-reduced-motion: reduce) {
+  .social-button-loading .social-button-icon {
+    animation: none;
+  }
+}
+
+/* Asegurar espaciado consistente para botones sociales */
+.social-auth-button {
+  min-height: 2.25rem; /* h-9 equivalente */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Fallback para iconos que no han cargado */
+.social-button-fallback {
+  width: 1rem;
+  height: 1rem;
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 0.125rem;
+  display: inline-block;
+}
+
+/* Prevenir overflow y saltos visuales */
+.social-button-content {
+  display: inline;
+  min-width: 0; /* Permitir truncado si es necesario */
+  white-space: nowrap;
+}
+
+/* Específico para botón de Google - usa variante outline para contorno visible */
+.google-social-button {
+  transition: all 0.2s ease;
+}
+
+.google-social-button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Prevenir dispersión del logo de Google durante carga inicial */
+.google-social-button svg {
+  contain: layout style paint;
+}
