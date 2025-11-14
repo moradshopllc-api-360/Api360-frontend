@@ -1,197 +1,241 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
-import { supabase, onAuthStateChange } from '@/lib/supabase/client'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { authService, initializeAuth, validateAuthState } from '@/lib/api'
+import type { User, AuthTokens } from '@/types/api'
 
 interface AuthContextType {
   user: User | null
-  session: Session | null
   loading: boolean
   error: string | null
-  isDevelopmentMode: boolean
-  signOut: () => Promise<void>
-  refreshSession: () => Promise<void>
+  isAuthenticated: boolean
+  login: (email: string, password: string, persist?: boolean) => Promise<void>
+  register: (email: string, password: string, name: string, role?: string) => Promise<void>
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
+  clearError: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isDevelopmentMode, setIsDevelopmentMode] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const router = useRouter()
 
+  // Initialize auth state on mount
   useEffect(() => {
-    // Check if we're in development mode with placeholder credentials
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseAnonKey ||
-        supabaseUrl === 'https://placeholder.supabase.co' ||
-        supabaseAnonKey === 'placeholder-key') {
-
-      console.warn('Development mode: Supabase credentials not configured. Using mock authentication for development.')
-      setIsDevelopmentMode(true)
-
-      // Check for mock user in localStorage
+    const initAuth = async () => {
       try {
-        let mockUserStr = localStorage.getItem('dev-user')
+        setLoading(true)
+        const { authenticated, user: authUser } = await initializeAuth()
 
-        // Only create default user if no mock user exists
-        if (!mockUserStr) {
-          console.log('🚀 [API360 AuthContext] No mock user found, staying unauthenticated in development mode')
-          setLoading(false)
-          return
-        }
-
-        let mockUser = JSON.parse(mockUserStr)
-        console.log('🚀 [API360 AuthContext] Loading mock user from localStorage:', mockUser.email)
-
-        // Create a mock user object that matches Supabase User interface
-        const user = {
-          id: mockUser.id,
-          email: mockUser.email,
-          user_metadata: {
-            name: mockUser.name,
-            role: mockUser.role
-          },
-          app_metadata: {},
-          aud: 'authenticated',
-          created_at: mockUser.created_at
-        } as User
-
-        // Create a mock session
-        const session = {
-          user,
-          access_token: 'dev-token',
-          refresh_token: 'dev-refresh',
-          expires_in: 3600,
-          token_type: 'bearer'
-        } as Session
-
-        setUser(user)
-        setSession(session)
-      } catch (error) {
-        console.error('❌ [API360 AuthContext] Error with mock user:', error)
-        // Clear corrupted data
-        localStorage.removeItem('dev-user')
-      } finally {
-        setLoading(false)
-      }
-      return
-    }
-
-    // Production mode with Supabase
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error('Error getting initial session:', error)
-          setError(error.message)
-          setSession(null)
-          setUser(null)
-        } else {
-          setSession(session)
-          setUser(session?.user ?? null)
+        if (authenticated && authUser && validateAuthState(authUser)) {
+          setUser(authUser)
+          setIsAuthenticated(true)
           setError(null)
+        } else {
+          setUser(null)
+          setIsAuthenticated(false)
         }
-      } catch (error) {
-        console.error('Unexpected error getting initial session:', error)
-        setError('Failed to initialize authentication')
-        setSession(null)
+      } catch (err) {
+        console.error('Failed to initialize auth:', err)
         setUser(null)
+        setIsAuthenticated(false)
+        setError('Failed to initialize authentication')
       } finally {
         setLoading(false)
       }
     }
 
-    getInitialSession()
-
-    // Listen for auth changes
-    const { data: { subscription } } = onAuthStateChange((event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setError(null)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    initAuth()
   }, [])
 
-  const handleSignOut = async () => {
-    try {
-      console.log("🔐 [API360 AuthContext] Starting sign out process...")
+  // Auto-refresh user session periodically
+  useEffect(() => {
+    if (!isAuthenticated) return
 
-      if (isDevelopmentMode) {
-        // Development mode: clear the mock user and state
-        console.log("🧹 [API360 AuthContext] Cleaning development mode state...")
-        localStorage.removeItem('dev-user')
-        localStorage.removeItem('dev-mode-visible')
-        setUser(null)
-        setSession(null)
-        console.log("✅ [API360 AuthContext] Development mode sign out completed")
-        return
+    const refreshInterval = setInterval(async () => {
+      try {
+        await refreshUser()
+      } catch (error) {
+        console.error('Failed to refresh user session:', error)
+        // Don't set error here to avoid annoying user
+      }
+    }, 5 * 60 * 1000) // Refresh every 5 minutes
+
+    return () => clearInterval(refreshInterval)
+  }, [isAuthenticated])
+
+  // Auto-logout on token expiration
+  useEffect(() => {
+    if (!isAuthenticated || !user) return
+
+    const checkTokenExpiration = () => {
+      // This is a simple check - in a real app, you'd decode the JWT or use refresh tokens
+      const lastActivity = localStorage.getItem('last-activity')
+      if (lastActivity) {
+        const timeSinceLastActivity = Date.now() - parseInt(lastActivity)
+        const maxInactivity = 30 * 60 * 1000 // 30 minutes
+
+        if (timeSinceLastActivity > maxInactivity) {
+          logout()
+        }
+      }
+    }
+
+    const activityCheck = setInterval(checkTokenExpiration, 60 * 1000) // Check every minute
+
+    return () => clearInterval(activityCheck)
+  }, [isAuthenticated, user])
+
+  const login = useCallback(async (email: string, password: string, persist: boolean = true): Promise<void> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await authService.login({ email, password })
+
+      if (!response.success) {
+        throw new Error(response.error || 'Login failed')
       }
 
-      // Production mode: clear Supabase session
-      console.log("🔐 [API360 AuthContext] Signing out from Supabase...")
-      await supabase.auth.signOut()
+      if (!response.data) {
+        throw new Error('No user data received')
+      }
 
-      // Clear local state
-      setUser(null)
-      setSession(null)
+      const { user: authUser, tokens } = response.data
 
-      // Clear any remaining tokens
-      localStorage.removeItem('auth-token')
-      sessionStorage.removeItem('auth-token')
+      if (!validateAuthState(authUser)) {
+        throw new Error('Account is not active or invalid')
+      }
 
-      console.log("✅ [API360 AuthContext] Production mode sign out completed")
-    } catch (error) {
-      console.error('❌ [API360 AuthContext] Error signing out:', error)
-      setError('Failed to sign out')
+      setUser(authUser)
+      setIsAuthenticated(true)
 
-      // Even on error, try to clear state
-      setUser(null)
-      setSession(null)
+      // Store last activity timestamp
+      localStorage.setItem('last-activity', Date.now().toString())
+
+      // Redirect based on user role
+      const redirectPath = getRoleBasedRedirect(authUser)
+      router.push(redirectPath)
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
     }
-  }
+  }, [router])
 
-  const refreshSession = async () => {
-    if (isDevelopmentMode) {
-      console.warn('Development mode: Session refresh not available')
-      return
-    }
+  const register = useCallback(async (
+    email: string,
+    password: string,
+    name: string,
+    role: string = 'crewmember'
+  ): Promise<void> => {
+    setLoading(true)
+    setError(null)
 
     try {
-      const { data: { session }, error } = await supabase.auth.refreshSession()
+      const response = await authService.register({
+        email,
+        password,
+        name,
+        role: role as any
+      })
 
-      if (error) {
-        console.error('Error refreshing session:', error)
-        setError(error.message)
-        setSession(null)
-        setUser(null)
+      if (!response.success) {
+        throw new Error(response.error || 'Registration failed')
+      }
+
+      if (!response.data) {
+        throw new Error('No user data received')
+      }
+
+      const { user: authUser } = response.data
+
+      if (!validateAuthState(authUser)) {
+        throw new Error('Account was created but is not active')
+      }
+
+      setUser(authUser)
+      setIsAuthenticated(true)
+
+      // Store last activity timestamp
+      localStorage.setItem('last-activity', Date.now().toString())
+
+      // Redirect to dashboard
+      router.push('/dashboard')
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Registration failed'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }, [router])
+
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      setLoading(true)
+      await authService.logout()
+    } catch (err) {
+      console.error('Logout error:', err)
+      // Continue with logout even if API call fails
+    } finally {
+      // Clear local state regardless of API response
+      setUser(null)
+      setIsAuthenticated(false)
+      setError(null)
+
+      // Clear activity timestamp
+      localStorage.removeItem('last-activity')
+
+      setLoading(false)
+      router.push('/auth/login')
+    }
+  }, [router])
+
+  const refreshUser = useCallback(async (): Promise<void> => {
+    try {
+      const response = await authService.getCurrentUser()
+
+      if (response.success && response.data && validateAuthState(response.data)) {
+        setUser(response.data)
+        setIsAuthenticated(true)
+
+        // Update activity timestamp
+        localStorage.setItem('last-activity', Date.now().toString())
       } else {
-        setSession(session)
-        setUser(session?.user ?? null)
-        setError(null)
+        // User is no longer valid, log them out
+        await logout()
       }
-    } catch (error) {
-      console.error('Unexpected error refreshing session:', error)
-      setError('Failed to refresh session')
+    } catch (err) {
+      console.error('Failed to refresh user:', err)
+      // Don't automatically logout on refresh failure - might be network issue
     }
-  }
+  }, [logout])
+
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
 
   const value: AuthContextType = {
     user,
-    session,
     loading,
     error,
-    isDevelopmentMode,
-    signOut: handleSignOut,
-    refreshSession
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    refreshUser,
+    clearError
   }
 
   return (
@@ -207,4 +251,73 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
+}
+
+// Helper function to get role-based redirect path
+function getRoleBasedRedirect(user: User): string {
+  switch (user.role) {
+    case 'manager':
+      return '/dashboard'
+    case 'crewmember':
+      return '/dashboard'
+    case 'driver':
+      return '/dashboard' // For now, driver also goes to dashboard
+    default:
+      return '/dashboard'
+  }
+}
+
+// Hook for requiring authentication
+export function useRequireAuth(redirectTo: string = '/auth/login') {
+  const { isAuthenticated, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push(redirectTo)
+    }
+  }, [isAuthenticated, loading, router, redirectTo])
+
+  return { isAuthenticated, loading }
+}
+
+// Hook for redirecting authenticated users away from auth pages
+export function useRedirectIfAuthenticated(redirectTo: string = '/dashboard') {
+  const { isAuthenticated, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.push(redirectTo)
+    }
+  }, [isAuthenticated, loading, router, redirectTo])
+
+  return { isAuthenticated, loading }
+}
+
+// Hook for role-based access control
+export function useRequireRole(allowedRoles: string[]) {
+  const { user, isAuthenticated, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading) {
+      if (!isAuthenticated) {
+        router.push('/auth/login')
+        return
+      }
+
+      if (user && !allowedRoles.includes(user.role)) {
+        router.push('/unauthorized')
+        return
+      }
+    }
+  }, [isAuthenticated, user, loading, allowedRoles, router])
+
+  return {
+    user,
+    isAuthenticated,
+    loading,
+    hasRequiredRole: user ? allowedRoles.includes(user.role) : false
+  }
 }

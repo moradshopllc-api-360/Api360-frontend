@@ -38,7 +38,7 @@ interface ClientLayoutProps {
 export function ClientLayout({ children, layoutPreferences, defaultOpen }: ClientLayoutProps) {
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
-  const { user, loading, isDevelopmentMode } = useAuth()
+  const { user, loading } = useAuth()
 
   // Initialize navigation loading for dashboard pages
   useNavigationLoading()
@@ -49,12 +49,12 @@ export function ClientLayout({ children, layoutPreferences, defaultOpen }: Clien
 
   // Security check: redirect unauthorized users
   useEffect(() => {
-    if (mounted && !loading && !user && !isDevelopmentMode) {
+    if (mounted && !loading && !user) {
       console.warn('🚨 [SECURITY] Unauthorized access attempt to dashboard - redirecting to login')
       router.push('/auth/login?redirect_to=/dashboard')
       return
     }
-  }, [mounted, loading, user, isDevelopmentMode, router])
+  }, [mounted, loading, user, router])
 
   if (!mounted) {
     return (
@@ -79,8 +79,8 @@ export function ClientLayout({ children, layoutPreferences, defaultOpen }: Clien
     )
   }
 
-  // Show unauthorized state if not authenticated and not in development mode
-  if (!user && !isDevelopmentMode) {
+  // Show unauthorized state if not authenticated
+  if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md p-6">
@@ -104,11 +104,7 @@ export function ClientLayout({ children, layoutPreferences, defaultOpen }: Clien
     )
   }
 
-  // Development mode warning
-  if (isDevelopmentMode && !user) {
-    console.warn('🚀 [DEV] Dashboard accessed in development mode without authentication')
-  }
-
+  
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar variant={layoutPreferences.variant} collapsible={layoutPreferences.collapsible} />

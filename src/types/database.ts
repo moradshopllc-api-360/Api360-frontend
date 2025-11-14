@@ -1,93 +1,36 @@
-// Supabase Database Type Definitions
+// Legacy Database Types - Now Backend Agnostic
+// These types are maintained for compatibility during migration
+
+import type { User, UserRole, SupportTicket, SupportPriority, SupportStatus, UserActivity } from './api'
+
+// Re-export main types from API for consistency
+export {
+  User,
+  UserRole,
+  SupportTicket,
+  SupportPriority,
+  SupportStatus,
+  UserActivity
+}
+
+// Legacy compatibility types
 export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          email: string
-          avatar_url: string | null
-          role: 'user' | 'admin' | 'manager'
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          user_id: string
-          name: string
-          email: string
-          avatar_url?: string | null
-          role?: 'user' | 'admin' | 'manager'
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          email?: string
-          avatar_url?: string | null
-          role?: 'user' | 'admin' | 'manager'
-          updated_at?: string
-        }
+        Row: User
+        Insert: Partial<User>
+        Update: Partial<User>
       }
       support_tickets: {
-        Row: {
-          id: string
-          user_id: string
-          subject: string
-          message: string
-          priority: 'low' | 'medium' | 'high' | 'urgent'
-          status: 'open' | 'in_progress' | 'resolved' | 'closed'
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          user_id: string
-          subject: string
-          message: string
-          priority?: 'low' | 'medium' | 'high' | 'urgent'
-          status?: 'open' | 'in_progress' | 'resolved' | 'closed'
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          subject?: string
-          message?: string
-          priority?: 'low' | 'medium' | 'high' | 'urgent'
-          status?: 'open' | 'in_progress' | 'resolved' | 'closed'
-          updated_at?: string
-        }
+        Row: SupportTicket
+        Insert: Omit<SupportTicket, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+        Update: Partial<SupportTicket>
       }
       user_activities: {
-        Row: {
-          id: string
-          user_id: string
-          action: string
-          details: Record<string, any> | null
-          ip_address: string | null
-          user_agent: string | null
-          created_at: string
-        }
-        Insert: {
-          user_id: string
-          action: string
-          details?: Record<string, any> | null
-          ip_address?: string | null
-          user_agent?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          action?: string
-          details?: Record<string, any> | null
-          ip_address?: string | null
-          user_agent?: string | null
-        }
+        Row: UserActivity
+        Insert: Omit<UserActivity, 'id' | 'created_at'>
+        Update: Partial<UserActivity>
       }
     }
     Views: {
@@ -105,13 +48,14 @@ export interface Database {
   }
 }
 
-// Extended types for application use
-export interface User {
+// Extended types for application use (maintained for compatibility)
+export interface Profile {
   id: string
+  user_id: string
+  name: string
   email: string
-  name?: string
-  avatar_url?: string
-  role?: 'user' | 'admin' | 'manager'
+  avatar_url: string | null
+  role: UserRole
   created_at: string
   updated_at: string
 }
@@ -129,39 +73,4 @@ export interface Session {
   access_token: string
   refresh_token: string
   expires_at: number
-}
-
-export interface Profile {
-  id: string
-  user_id: string
-  name: string
-  email: string
-  avatar_url: string | null
-  role: 'user' | 'admin' | 'manager'
-  created_at: string
-  updated_at: string
-  // Additional profile fields can be added here
-}
-
-export interface SupportTicket {
-  id: string
-  user_id: string
-  subject: string
-  message: string
-  priority: 'low' | 'medium' | 'high' | 'urgent'
-  status: 'open' | 'in_progress' | 'resolved' | 'closed'
-  created_at: string
-  updated_at: string
-  // Additional ticket fields can be added here
-}
-
-export interface UserActivity {
-  id: string
-  user_id: string
-  action: string
-  details: Record<string, any> | null
-  ip_address: string | null
-  user_agent: string | null
-  created_at: string
-  // Additional activity fields can be added here
 }

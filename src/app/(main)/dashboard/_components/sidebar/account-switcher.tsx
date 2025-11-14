@@ -39,18 +39,18 @@ export function AccountSwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className="size-9 rounded-lg cursor-pointer">
-          <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.name || user.email || "User"} />
-          <AvatarFallback className="rounded-lg">{getInitials(user.user_metadata?.name || user.email || "User")}</AvatarFallback>
+          <AvatarImage src={user.avatar_url} alt={user.name || user.email || "User"} />
+          <AvatarFallback className="rounded-lg">{getInitials(user.name || user.email || "User")}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56 space-y-1 rounded-lg" side="bottom" align="end" sideOffset={4}>
         <div className="p-2">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 rounded-lg">
-              <AvatarFallback className="rounded-lg">{getInitials(user.user_metadata?.name || user.email || "User")}</AvatarFallback>
+              <AvatarFallback className="rounded-lg">{getInitials(user.name || user.email || "User")}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">{user.user_metadata?.name || user.email?.split('@')[0] || "User"}</span>
+              <span className="truncate font-semibold">{user.name || user.email?.split('@')[0] || "User"}</span>
               <span className="truncate text-xs text-muted-foreground">{user.email}</span>
               <span className="truncate text-xs capitalize text-primary">Administrator</span>
             </div>

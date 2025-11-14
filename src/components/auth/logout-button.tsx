@@ -8,18 +8,16 @@ import { useAuth } from "@/contexts/auth-context"
 
 export function LogoutButton() {
   const router = useRouter()
-  const { signOut: authSignOut, isDevelopmentMode } = useAuth()
+  const { logout: authSignOut } = useAuth()
 
   const handleLogout = async () => {
     try {
       console.log("🚪 [API360] Initiating complete logout process...")
 
-      // 1. Clear development mode mock user if exists
-      if (isDevelopmentMode) {
-        console.log("🧹 [API360] Cleaning development mode session...")
-        localStorage.removeItem('dev-user')
-        localStorage.removeItem('dev-mode-visible')
-      }
+      // 1. Clear any development mode artifacts
+      console.log("🧹 [API360] Cleaning development mode session...")
+      localStorage.removeItem('dev-user')
+      localStorage.removeItem('dev-mode-visible')
 
       // 2. Clear any stored auth tokens
       console.log("🧹 [API360] Cleaning authentication tokens...")

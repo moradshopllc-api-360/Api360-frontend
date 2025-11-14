@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { LanguageProvider } from "@/contexts/language-context";
 import { LoadingProvider } from "@/contexts/loading-context";
 import { AIWorkflowProvider } from "@/components/ai/AIWorkflowProvider";
+import { QueryClientProvider } from "@/lib/query/client";
 import { Toaster } from "@/components/ui/sonner";
 import { EthereumSafetyProvider } from "@/components/ethereum-safety-provider";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -40,20 +41,22 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className={`${inter.className} min-h-screen antialiased`} suppressHydrationWarning>
         <EthereumSafetyProvider />
         <ErrorBoundary>
-          <AIWorkflowProvider>
-            <LoadingProvider>
-              <AuthProvider>
-                <LanguageProvider>
-                  <PreferencesStoreProvider themeMode={themeMode} themePreset={themePreset}>
-                    {children}
-                    <GlobalSpinner />
-                    <Toaster />
-                    <DevelopmentModeAuth />
-                  </PreferencesStoreProvider>
-                </LanguageProvider>
-              </AuthProvider>
-            </LoadingProvider>
-          </AIWorkflowProvider>
+          <QueryClientProvider>
+            <AIWorkflowProvider>
+              <LoadingProvider>
+                <AuthProvider>
+                  <LanguageProvider>
+                    <PreferencesStoreProvider themeMode={themeMode} themePreset={themePreset}>
+                      {children}
+                      <GlobalSpinner />
+                      <Toaster />
+                      <DevelopmentModeAuth />
+                    </PreferencesStoreProvider>
+                  </LanguageProvider>
+                </AuthProvider>
+              </LoadingProvider>
+            </AIWorkflowProvider>
+          </QueryClientProvider>
         </ErrorBoundary>
       </body>
     </html>

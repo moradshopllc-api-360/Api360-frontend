@@ -13,15 +13,15 @@ import { Lock } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, loading, isDevelopmentMode } = useAuth();
+  const { user, loading } = useAuth();
 
   // Security check: redirect unauthorized users
   useEffect(() => {
-    if (!loading && !user && !isDevelopmentMode) {
+    if (!loading && !user) {
       console.warn('🚨 [SECURITY] Unauthorized access to dashboard default page - redirecting to login');
       router.push('/auth/login?redirect_to=/dashboard/default');
     }
-  }, [loading, user, isDevelopmentMode, router]);
+  }, [loading, user, router]);
 
   if (loading) {
     return (
@@ -34,7 +34,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user && !isDevelopmentMode) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="max-w-md text-center p-6">

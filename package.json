@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"
@@ -23,8 +24,8 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-select": "^2.2.6",
-    "@supabase/supabase-js": "^2.79.0",
     "@tanstack/react-query": "^5.90.5",
+    "@tanstack/react-query-devtools": "^5.90.2",
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",

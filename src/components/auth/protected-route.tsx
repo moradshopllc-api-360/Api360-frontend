@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole, fallback, requireAuth = true }: ProtectedRouteProps) {
-  const { user, loading, error, isDevelopmentMode } = useAuth()
+  const { user, loading, error } = useAuth()
 
   // Show loading state while checking authentication
   if (loading) {
@@ -24,21 +24,7 @@ export function ProtectedRoute({ children, requiredRole, fallback, requireAuth =
     )
   }
 
-  // Development mode: allow access without authentication
-  if (isDevelopmentMode) {
-    console.warn('Development mode: Access granted without authentication')
-    return (
-      <>
-        {children}
-        {requireAuth && (
-          <div className="fixed bottom-4 right-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-4 py-2 rounded-lg text-sm z-50">
-            🚀 Development Mode: Authentication bypassed
-          </div>
-        )}
-      </>
-    )
-  }
-
+  
   // Show error state if authentication failed
   if (error) {
     return fallback || (

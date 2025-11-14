@@ -1,3 +1,4 @@
 npm run generate:presets
 git add src/types/preferences/theme.ts
+npm run typecheck
 npx lint-staged

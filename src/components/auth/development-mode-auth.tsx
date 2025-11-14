@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 
 export function DevelopmentModeAuth() {
-  const { isDevelopmentMode, signOut } = useAuth()
+  const { logout } = useAuth()
+  const isDevelopmentMode = false // Development mode disabled in new auth system
   const [isVisible, setIsVisible] = useState(true)
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -45,7 +46,7 @@ export function DevelopmentModeAuth() {
     localStorage.removeItem('dev-mode-visible')
 
     // Call the main auth context sign out for complete cleanup
-    await signOut()
+    await logout()
 
     // Force page reload to ensure clean state
     window.location.href = '/auth/login'

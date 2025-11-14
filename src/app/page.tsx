@@ -121,7 +121,7 @@ export default function HomePage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-6"></div>
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
               Welcome back,
-              <span className="block text-primary"> {user.user_metadata?.name || user.email?.split('@')[0]}!</span>
+              <span className="block text-primary"> {user.name || user.email?.split('@')[0]}!</span>
             </h1>
             <p className="mt-6 text-lg leading-8 text-muted-foreground max-w-2xl mx-auto">
               You're successfully logged in as a <span className="font-semibold text-primary capitalize">Administrator</span>.
@@ -163,7 +163,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
               Welcome back,
-              <span className="block text-primary"> {user.user_metadata?.name || user.email?.split('@')[0]}!</span>
+              <span className="block text-primary"> {user.name || user.email?.split('@')[0]}!</span>
             </h1>
             <p className="mt-6 text-lg leading-8 text-muted-foreground max-w-2xl mx-auto">
               You're successfully logged in as a <span className="font-semibold text-primary capitalize">Administrator</span>.

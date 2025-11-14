@@ -139,7 +139,7 @@ export function LoginButton({
 } & Omit<AIButtonProps, 'spec' | 'data' | 'onActionSuccess'>) {
   const spec = {
     method: 'POST' as const,
-    path: '/api/auth/login',
+    path: '/auth/login',
     doc: {
       title: 'User Login',
       description: 'Authenticate user with email and password'
@@ -176,7 +176,7 @@ export function RegisterButton({
 } & Omit<AIButtonProps, 'spec' | 'data' | 'onActionSuccess'>) {
   const spec = {
     method: 'POST' as const,
-    path: '/api/auth/register',
+    path: '/auth/register',
     doc: {
       title: 'User Registration',
       description: 'Register new user account'
@@ -207,7 +207,7 @@ export function LogoutButton({
 } & Omit<AIButtonProps, 'spec' | 'data' | 'onActionSuccess'>) {
   const spec = {
     method: 'POST' as const,
-    path: '/api/auth/logout',
+    path: '/auth/logout',
     doc: {
       title: 'User Logout',
       description: 'End user session'

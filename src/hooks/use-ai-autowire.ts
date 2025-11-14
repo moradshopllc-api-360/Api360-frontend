@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { ActionSpec } from '@/lib/ai/actions'
 import { validateActionSpec } from '@/lib/ai/actions'
 import { useDocLogger } from '@/lib/ai/doc-logger'
-import { apiFetch } from '@/config/api-config'
+import { apiClient } from '@/lib/api'
 
 export interface UseAIAutowireOptions {
   onSuccess?: (data: any) => void
@@ -56,7 +56,7 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
           _metadata: {
             userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'SSR',
             timestamp: new Date().toISOString(),
-            hasAuth: !!localStorage.getItem('auth-token') || !!sessionStorage.getItem('auth-token'),
+            hasAuth: apiClient.hasAuth(),
             isNavigation: spec.method === 'NAVIGATE'
           }
         }
@@ -74,7 +74,7 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
         })
       }
 
-      // Handle NAVIGATE method - use Next.js router instead of apiFetch
+      // Handle NAVIGATE method - use Next.js router instead of API
       if (spec.method === 'NAVIGATE') {
         console.log(`🧭 [AI360] Navigation action detected: ${spec.path}`)
 
@@ -122,62 +122,58 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
         return navigationData
       }
 
-      // Use centralized apiFetch which handles auth headers automatically for API methods
-      const fetchOptions: RequestInit = {
-        method: spec.method,
-      }
-
-      // Add body for methods that support it
-      if (data && ['POST', 'PUT', 'PATCH'].includes(spec.method)) {
-        fetchOptions.body = JSON.stringify(data)
-        console.log(`📤 [AI360] Request body:`, {
-          contentType: 'application/json',
-          bodySize: JSON.stringify(data).length,
-          hasPassword: !!data.password || !!data.newPassword
-        })
-      }
-
+      // Use apiClient for API requests
       console.log(`🌐 [AI360] Sending API request to ${spec.path}`)
-      const res = await apiFetch(spec.path, fetchOptions)
+
+      let apiResponse: any
+
+      switch (spec.method) {
+        case 'GET':
+          apiResponse = await apiClient.get(spec.path, data)
+          break
+        case 'POST':
+          apiResponse = await apiClient.post(spec.path, data)
+          break
+        case 'PUT':
+          apiResponse = await apiClient.put(spec.path, data)
+          break
+        case 'PATCH':
+          apiResponse = await apiClient.patch(spec.path, data)
+          break
+        case 'DELETE':
+          apiResponse = await apiClient.delete(spec.path)
+          break
+        default:
+          throw new Error(`Unsupported HTTP method: ${spec.method}`)
+      }
+
       const duration = Date.now() - startTime
 
-      // Check if this is a mock response
-      const isMockResponse = res.headers.get('X-Mock-Response') === 'true'
-      const isDevelopmentMode = res.headers.get('X-Development-Mode') === 'true'
-
       console.log(`📥 [AI360] Response received:`, {
-        status: res.status,
-        statusText: res.statusText,
-        contentType: res.headers.get('content-type'),
-        isMockResponse,
-        isDevelopmentMode,
+        status: apiResponse.status,
+        success: apiResponse.success,
         duration: `${duration}ms`
       })
 
-      if (!res.ok) {
-        const errorText = await res.text()
-        const error = new Error(`HTTP ${res.status}: ${errorText}`)
+      if (!apiResponse.success) {
+        const error = new Error(apiResponse.error || 'Request failed')
 
         // Enhanced error logging
         console.error(`❌ [AI360] Request failed:`, {
-          status: res.status,
-          statusText: res.statusText,
-          errorText,
+          status: apiResponse.status,
+          error: apiResponse.error,
           path: spec.path,
           method: spec.method,
-          duration: `${duration}ms`,
-          isMockResponse
+          duration: `${duration}ms`
         })
 
         addLog({
           type: 'error',
-          message: `❌ Request failed: ${res.status} ${res.statusText}`,
+          message: `❌ Request failed: ${apiResponse.error}`,
           action: `${spec.method} ${spec.path}`,
           data: {
-            status: res.status,
-            statusText: res.statusText,
-            error: errorText,
-            isMockResponse,
+            status: apiResponse.status,
+            error: apiResponse.error,
             duration
           },
           duration
@@ -186,49 +182,16 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
         throw error
       }
 
-      // Handle different response types with enhanced logging
-      const contentType = res.headers.get('content-type')
-      let responseData: any
-
-      console.log(`📊 [AI360] Processing response content:`, {
-        contentType,
-        contentLength: res.headers.get('content-length')
-      })
-
-      if (contentType?.includes('application/json')) {
-        responseData = await res.json()
-        console.log(`📋 [AI360] JSON response parsed:`, {
-          keys: responseData ? Object.keys(responseData) : [],
-          hasData: !!responseData,
-          isArray: Array.isArray(responseData),
-          isMockResponse
-        })
-      } else if (contentType?.includes('text/')) {
-        responseData = await res.text()
-        console.log(`📝 [AI360] Text response parsed:`, {
-          length: responseData.length,
-          preview: responseData.substring(0, 100)
-        })
-      } else {
-        responseData = await res.blob()
-        console.log(`📎 [AI360] Blob response received:`, {
-          size: responseData.size,
-          type: responseData.type
-        })
-      }
-
+      const responseData = apiResponse.data
       setResponse(responseData)
 
-      // Success logging with mock mode indicator
-      const successMessage = isMockResponse
-        ? `✅ Request successful (mock mode): ${spec.method} ${spec.path}`
-        : `✅ Request successful: ${spec.method} ${spec.path}`
+      // Success logging
+      const successMessage = `✅ Request successful: ${spec.method} ${spec.path}`
 
       console.log(`🎉 [AI360] Request completed successfully:`, {
         method: spec.method,
         path: spec.path,
         duration: `${duration}ms`,
-        isMockResponse,
         responseType: typeof responseData
       })
 
@@ -239,9 +202,8 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
         data: {
           ...responseData,
           _metadata: {
-            isMockResponse,
             duration,
-            contentType
+            status: apiResponse.status
           }
         },
         duration
@@ -260,8 +222,6 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
 
       // Enhanced error classification and logging
       const errorType = error.name || 'UNKNOWN_ERROR'
-      const isNetworkError = error.message.includes('Failed to fetch') ||
-                            error.message.includes('NETWORK_ERROR')
 
       console.error(`💥 [AI360] Execution failed:`, {
         errorType,
@@ -269,7 +229,6 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
         method: spec.method,
         path: spec.path,
         duration: `${duration}ms`,
-        isNetworkError,
         stack: error.stack?.split('\n').slice(0, 3).join('\n') // First 3 lines of stack
       })
 
@@ -282,7 +241,6 @@ export function useAIAutowire(options: UseAIAutowireOptions = {}): UseAIAutowire
         data: {
           error: error.message,
           errorType,
-          isNetworkError,
           duration,
           stack: error.stack?.split('\n').slice(0, 2) // First 2 lines for doc log
         },
